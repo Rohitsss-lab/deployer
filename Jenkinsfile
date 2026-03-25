@@ -12,25 +12,21 @@ pipeline {
         stage('Clean Workspace') {
             steps { cleanWs() }
         }
-stage('Checkout Umbrella Tag') {
+sstage('Checkout Umbrella Tag') {
     steps {
         script {
             if (!params.DEPLOY_VERSION?.trim()) {
                 error "DEPLOY_VERSION is required"
             }
-            checkout([
-                $class: 'GitSCM',
+            checkout scmGit(
                 branches: [[name: "refs/tags/v${params.DEPLOY_VERSION}"]],
+                extensions: [cloneOption(noTags: false, shallow: false, depth: 0, honorRefspec: true)],
                 userRemoteConfigs: [[
-                    url: "${env.GIT_REPO_URL}",
-                    credentialsId: 'github-token'
-                ]],
-                extensions: [[
-                    $class: 'CloneOption',
-                    noTags: false,
-                    shallow: false
+                    credentialsId: 'github-token',
+                    refspec: '+refs/tags/*:refs/remotes/origin/tags/*',
+                    url: "${env.GIT_REPO_URL}"
                 ]]
-            ])
+            )
             echo "Checked out deployer at tag v${params.DEPLOY_VERSION}"
         }
     }
