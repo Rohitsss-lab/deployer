@@ -20,7 +20,7 @@ pipeline {
                     }
                 }
                 checkout([$class: 'GitSCM',
-                    branches: [[name: "refs/tags/v${params.DEPLOY_VERSION}"]],
+                    branches: [[name: "refs/tags/${params.DEPLOY_VERSION}"]],
                     doGenerateSubmoduleConfigurations: false,
                     extensions: [],
                     submoduleCfg: [],
@@ -29,7 +29,7 @@ pipeline {
                         url: 'https://github.com/Rohitsss-lab/deployer.git'
                     ]]
                 ])
-                echo "Checked out deployer at tag v${params.DEPLOY_VERSION}"
+                echo "Checked out deployer at tag ${params.DEPLOY_VERSION}"
             }
         }
         stage('Read Versions') {
@@ -56,9 +56,9 @@ with open("BACKEND_VERSION.txt", "w", newline="") as f:
                     env.BACKEND_VERSION  = readFile('BACKEND_VERSION.txt').replaceAll('[^0-9.]', '').trim()
 
                     echo "==========================================="
-                    echo "Umbrella  : v${params.DEPLOY_VERSION}"
-                    echo "frontend  : v${env.FRONTEND_VERSION}"
-                    echo "backend   : v${env.BACKEND_VERSION}"
+                    echo "Umbrella  : ${params.DEPLOY_VERSION}"
+                    echo "frontend  : ${env.FRONTEND_VERSION}"
+                    echo "backend   : ${env.BACKEND_VERSION}"
                     echo "Server    : ${env.SERVER_USER}@${env.SERVER_IP}"
                     echo "==========================================="
                 }
@@ -66,30 +66,30 @@ with open("BACKEND_VERSION.txt", "w", newline="") as f:
         }
         stage('Deploy frontend') {
             steps {
-                echo "Deploying frontend v${env.FRONTEND_VERSION} to ${env.SERVER_IP}"
+                echo "Deploying frontend ${env.FRONTEND_VERSION} to ${env.SERVER_IP}"
                 withCredentials([sshUserPrivateKey(credentialsId: 'deploy-ssh-key', keyFileVariable: 'SSH_KEY')]) {
                     bat """
                         icacls "%SSH_KEY%" /inheritance:r
                         icacls "%SSH_KEY%" /grant:r "SYSTEM:F"
                         icacls "%SSH_KEY%" /grant:r "Administrators:F"
-                        ssh -o StrictHostKeyChecking=no -i "%SSH_KEY%" ${env.SERVER_USER}@${env.SERVER_IP} "cd /root/frontend && git fetch --tags && git checkout tags/v${env.FRONTEND_VERSION} -f && npm install --production && pm2 restart frontend || pm2 start src/index.js --name frontend && pm2 save"
+                        ssh -o StrictHostKeyChecking=no -i "%SSH_KEY%" ${env.SERVER_USER}@${env.SERVER_IP} "cd /root/frontend && git fetch --tags && git checkout tags/${env.FRONTEND_VERSION} -f && npm install --production && pm2 restart frontend || pm2 start src/index.js --name frontend && pm2 save"
                     """
                 }
-                echo "frontend v${env.FRONTEND_VERSION} is LIVE on ${env.SERVER_IP}:3001"
+                echo "frontend ${env.FRONTEND_VERSION} is LIVE on ${env.SERVER_IP}:3001"
             }
         }
         stage('Deploy backend') {
             steps {
-                echo "Deploying backend v${env.BACKEND_VERSION} to ${env.SERVER_IP}"
+                echo "Deploying backend ${env.BACKEND_VERSION} to ${env.SERVER_IP}"
                 withCredentials([sshUserPrivateKey(credentialsId: 'deploy-ssh-key', keyFileVariable: 'SSH_KEY')]) {
                     bat """
                         icacls "%SSH_KEY%" /inheritance:r
                         icacls "%SSH_KEY%" /grant:r "SYSTEM:F"
                         icacls "%SSH_KEY%" /grant:r "Administrators:F"
-                        ssh -o StrictHostKeyChecking=no -i "%SSH_KEY%" ${env.SERVER_USER}@${env.SERVER_IP} "cd /root/backend && git fetch --tags && git checkout tags/v${env.BACKEND_VERSION} -f && npm install --production && pm2 restart backend || pm2 start src/index.js --name backend && pm2 save"
+                        ssh -o StrictHostKeyChecking=no -i "%SSH_KEY%" ${env.SERVER_USER}@${env.SERVER_IP} "cd /root/backend && git fetch --tags && git checkout tags/${env.BACKEND_VERSION} -f && npm install --production && pm2 restart backend || pm2 start src/index.js --name backend && pm2 save"
                     """
                 }
-                echo "backend v${env.BACKEND_VERSION} is LIVE on ${env.SERVER_IP}:3002"
+                echo "backend ${env.BACKEND_VERSION} is LIVE on ${env.SERVER_IP}:3002"
             }
         }
     }
@@ -97,9 +97,9 @@ with open("BACKEND_VERSION.txt", "w", newline="") as f:
         success {
             echo "==========================================="
             echo "DEPLOY SUCCESS"
-            echo "Umbrella  v${params.DEPLOY_VERSION}"
-            echo "frontend  v${env.FRONTEND_VERSION} LIVE on port 3001"
-            echo "backend   v${env.BACKEND_VERSION}  LIVE on port 3002"
+            echo "Umbrella  ${params.DEPLOY_VERSION}"
+            echo "frontend  ${env.FRONTEND_VERSION} LIVE on port 3001"
+            echo "backend   ${env.BACKEND_VERSION}  LIVE on port 3002"
             echo "Server    ${env.SERVER_IP}"
             echo "==========================================="
         }
