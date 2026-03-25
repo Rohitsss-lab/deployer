@@ -18,25 +18,18 @@ pipeline {
                     if (!params.DEPLOY_VERSION?.trim()) {
                         error "DEPLOY_VERSION is required — enter umbrella version e.g. 1.0.1"
                     }
-                    checkout([
-                        $class: 'GitSCM',
-                        branches: [[name: "refs/tags/v${params.DEPLOY_VERSION}"]],
-                        doGenerateSubmoduleConfigurations: false,
-                        extensions: [[
-                            $class: 'CloneOption',
-                            noTags: false,
-                            shallow: false,
-                            depth: 0,
-                            honorRefspec: true
-                        ]],
-                        userRemoteConfigs: [[
-                            url: 'https://github.com/Rohitsss-lab/deployer.git',
-                            credentialsId: 'github-token',
-                            refspec: '+refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/*'
-                        ]]
-                    ])
-                    echo "Checked out deployer at tag v${params.DEPLOY_VERSION}"
                 }
+                checkout([$class: 'GitSCM',
+                    branches: [[name: "refs/tags/v${params.DEPLOY_VERSION}"]],
+                    doGenerateSubmoduleConfigurations: false,
+                    extensions: [],
+                    submoduleCfg: [],
+                    userRemoteConfigs: [[
+                        credentialsId: 'github-token',
+                        url: 'https://github.com/Rohitsss-lab/deployer.git'
+                    ]]
+                ])
+                echo "Checked out deployer at tag v${params.DEPLOY_VERSION}"
             }
         }
         stage('Read Versions') {
