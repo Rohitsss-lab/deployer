@@ -20,10 +20,15 @@ stage('Checkout Umbrella Tag') {
             }
             checkout([
                 $class: 'GitSCM',
-                branches: [[name: "v${params.DEPLOY_VERSION}"]],
+                branches: [[name: "refs/tags/v${params.DEPLOY_VERSION}"]],
                 userRemoteConfigs: [[
                     url: "${env.GIT_REPO_URL}",
                     credentialsId: 'github-token'
+                ]],
+                extensions: [[
+                    $class: 'CloneOption',
+                    noTags: false,
+                    shallow: false
                 ]]
             ])
             echo "Checked out deployer at tag v${params.DEPLOY_VERSION}"
