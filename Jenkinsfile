@@ -1,11 +1,12 @@
 pipeline {
     agent any
     parameters {
-        string(name: 'DEPLOY_VERSION', defaultValue: '', description: 'Umbrella version to deploy e.g. 1.0.5')
+        string(name: 'DEPLOY_VERSION', defaultValue: '', description: 'Umbrella version to deploy e.g. 1.0.0')
     }
     environment {
         GIT_REPO_URL = 'https://github.com/Rohitsss-lab/deployer.git'
-        SERVER_IP    = 'YOUR_SERVER_IP'
+        SERVER_IP    = '192.168.2.178'
+        SERVER_USER  = 'root'
     }
     stages {
         stage('Clean Workspace') {
@@ -15,7 +16,7 @@ pipeline {
             steps {
                 script {
                     if (!params.DEPLOY_VERSION?.trim()) {
-                        error "Enter DEPLOY_VERSION — e.g. 1.0.5"
+                        error "DEPLOY_VERSION is required — enter umbrella version e.g. 1.0.0"
                     }
                     checkout([
                         $class: 'GitSCM',
@@ -25,7 +26,7 @@ pipeline {
                             credentialsId: 'github-token'
                         ]]
                     ])
-                    echo "Checked out deployer at umbrella tag v${params.DEPLOY_VERSION}"
+                    echo "Checked out deployer at tag v${params.DEPLOY_VERSION}"
                 }
             }
         }
@@ -41,14 +42,14 @@ with open("versions.json", "r") as f:
 frontend = data.get("frontend", "").strip()
 backend  = data.get("backend",  "").strip()
 
+print(f"frontend = {frontend}")
+print(f"backend  = {backend}")
+
 with open("FRONTEND_VERSION.txt", "w", newline="") as f:
     f.write(frontend)
 
 with open("BACKEND_VERSION.txt", "w", newline="") as f:
     f.write(backend)
-
-print(f"frontend = {frontend}")
-print(f"backend  = {backend}")
 '''
                     bat '"C:\\Program Files\\Python313\\python.exe" parse_versions.py'
 
@@ -61,30 +62,31 @@ print(f"backend  = {backend}")
                     echo "Umbrella  : v${params.DEPLOY_VERSION}"
                     echo "frontend  : v${env.FRONTEND_VERSION}"
                     echo "backend   : v${env.BACKEND_VERSION}"
+                    echo "Server    : ${env.SERVER_USER}@${env.SERVER_IP}"
                     echo "==========================================="
                 }
             }
         }
         stage('Deploy frontend') {
             steps {
-                echo "Deploying frontend v${env.FRONTEND_VERSION}"
+                echo "Deploying frontend v${env.FRONTEND_VERSION} to ${env.SERVER_IP}"
                 sshagent(credentials: ['deploy-ssh-key']) {
                     bat """
-                        ssh -o StrictHostKeyChecking=no root@${env.SERVER_IP} "cd /root/frontend && git fetch --tags && git checkout tags/v${env.FRONTEND_VERSION} -f && npm install --production && pm2 restart frontend || pm2 start src/index.js --name frontend && pm2 save"
+                        ssh -o StrictHostKeyChecking=no ${env.SERVER_USER}@${env.SERVER_IP} "cd /root/frontend && git fetch --tags && git checkout tags/v${env.FRONTEND_VERSION} -f && npm install --production && pm2 restart frontend || pm2 start src/index.js --name frontend && pm2 save"
                     """
                 }
-                echo "frontend v${env.FRONTEND_VERSION} is LIVE"
+                echo "frontend v${env.FRONTEND_VERSION} is LIVE on ${env.SERVER_IP}:3001"
             }
         }
         stage('Deploy backend') {
             steps {
-                echo "Deploying backend v${env.BACKEND_VERSION}"
+                echo "Deploying backend v${env.BACKEND_VERSION} to ${env.SERVER_IP}"
                 sshagent(credentials: ['deploy-ssh-key']) {
                     bat """
-                        ssh -o StrictHostKeyChecking=no root@${env.SERVER_IP} "cd /root/backend && git fetch --tags && git checkout tags/v${env.BACKEND_VERSION} -f && npm install --production && pm2 restart backend || pm2 start src/index.js --name backend && pm2 save"
+                        ssh -o StrictHostKeyChecking=no ${env.SERVER_USER}@${env.SERVER_IP} "cd /root/backend && git fetch --tags && git checkout tags/v${env.BACKEND_VERSION} -f && npm install --production && pm2 restart backend || pm2 start src/index.js --name backend && pm2 save"
                     """
                 }
-                echo "backend v${env.BACKEND_VERSION} is LIVE"
+                echo "backend v${env.BACKEND_VERSION} is LIVE on ${env.SERVER_IP}:3002"
             }
         }
     }
@@ -93,8 +95,9 @@ print(f"backend  = {backend}")
             echo "==========================================="
             echo "DEPLOY SUCCESS"
             echo "Umbrella  v${params.DEPLOY_VERSION}"
-            echo "frontend  v${env.FRONTEND_VERSION} LIVE"
-            echo "backend   v${env.BACKEND_VERSION}  LIVE"
+            echo "frontend  v${env.FRONTEND_VERSION} LIVE on port 3001"
+            echo "backend   v${env.BACKEND_VERSION}  LIVE on port 3002"
+            echo "Server    ${env.SERVER_IP}"
             echo "==========================================="
         }
         failure { echo "Deployment FAILED" }
