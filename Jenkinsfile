@@ -1,7 +1,7 @@
 pipeline {
     agent any
     parameters {
-        string(name: 'DEPLOY_VERSION', defaultValue: '', description: 'Umbrella version to deploy e.g. 1.0.0')
+        string(name: 'DEPLOY_VERSION', defaultValue: '', description: 'Umbrella version to deploy e.g. 1.0.1')
     }
     environment {
         GIT_REPO_URL = 'https://github.com/Rohitsss-lab/deployer.git'
@@ -12,25 +12,33 @@ pipeline {
         stage('Clean Workspace') {
             steps { cleanWs() }
         }
-sstage('Checkout Umbrella Tag') {
-    steps {
-        script {
-            if (!params.DEPLOY_VERSION?.trim()) {
-                error "DEPLOY_VERSION is required"
+        stage('Checkout Umbrella Tag') {
+            steps {
+                script {
+                    if (!params.DEPLOY_VERSION?.trim()) {
+                        error "DEPLOY_VERSION is required — enter umbrella version e.g. 1.0.1"
+                    }
+                    checkout([
+                        $class: 'GitSCM',
+                        branches: [[name: "refs/tags/v${params.DEPLOY_VERSION}"]],
+                        doGenerateSubmoduleConfigurations: false,
+                        extensions: [[
+                            $class: 'CloneOption',
+                            noTags: false,
+                            shallow: false,
+                            depth: 0,
+                            honorRefspec: true
+                        ]],
+                        userRemoteConfigs: [[
+                            url: 'https://github.com/Rohitsss-lab/deployer.git',
+                            credentialsId: 'github-token',
+                            refspec: '+refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/*'
+                        ]]
+                    ])
+                    echo "Checked out deployer at tag v${params.DEPLOY_VERSION}"
+                }
             }
-            checkout scmGit(
-                branches: [[name: "refs/tags/v${params.DEPLOY_VERSION}"]],
-                extensions: [cloneOption(noTags: false, shallow: false, depth: 0, honorRefspec: true)],
-                userRemoteConfigs: [[
-                    credentialsId: 'github-token',
-                    refspec: '+refs/tags/*:refs/remotes/origin/tags/*',
-                    url: "${env.GIT_REPO_URL}"
-                ]]
-            )
-            echo "Checked out deployer at tag v${params.DEPLOY_VERSION}"
         }
-    }
-}
         stage('Read Versions') {
             steps {
                 script {
@@ -54,10 +62,12 @@ with open("BACKEND_VERSION.txt", "w", newline="") as f:
                     env.FRONTEND_VERSION = readFile('FRONTEND_VERSION.txt').replaceAll('[^0-9.]', '').trim()
                     env.BACKEND_VERSION  = readFile('BACKEND_VERSION.txt').replaceAll('[^0-9.]', '').trim()
 
+                    echo "==========================================="
                     echo "Umbrella  : v${params.DEPLOY_VERSION}"
                     echo "frontend  : v${env.FRONTEND_VERSION}"
                     echo "backend   : v${env.BACKEND_VERSION}"
                     echo "Server    : ${env.SERVER_USER}@${env.SERVER_IP}"
+                    echo "==========================================="
                 }
             }
         }
