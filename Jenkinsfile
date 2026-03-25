@@ -12,24 +12,24 @@ pipeline {
         stage('Clean Workspace') {
             steps { cleanWs() }
         }
-        stage('Checkout Umbrella Tag') {
-            steps {
-                script {
-                    if (!params.DEPLOY_VERSION?.trim()) {
-                        error "DEPLOY_VERSION is required — enter umbrella version e.g. 1.0.0"
-                    }
-                    checkout([
-                        $class: 'GitSCM',
-                        branches: [[name: "refs/tags/v${params.DEPLOY_VERSION}"]],
-                        userRemoteConfigs: [[
-                            url: "${env.GIT_REPO_URL}",
-                            credentialsId: 'github-token'
-                        ]]
-                    ])
-                    echo "Checked out deployer at tag v${params.DEPLOY_VERSION}"
-                }
+stage('Checkout Umbrella Tag') {
+    steps {
+        script {
+            if (!params.DEPLOY_VERSION?.trim()) {
+                error "DEPLOY_VERSION is required"
             }
+            checkout([
+                $class: 'GitSCM',
+                branches: [[name: "v${params.DEPLOY_VERSION}"]],
+                userRemoteConfigs: [[
+                    url: "${env.GIT_REPO_URL}",
+                    credentialsId: 'github-token'
+                ]]
+            ])
+            echo "Checked out deployer at tag v${params.DEPLOY_VERSION}"
         }
+    }
+}
         stage('Read Versions') {
             steps {
                 script {
